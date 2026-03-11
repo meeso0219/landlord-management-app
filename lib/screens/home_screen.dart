@@ -4,6 +4,8 @@ import 'package:landlord_management_app/repositories/unit_lease_repository.dart'
 import 'package:landlord_management_app/screens/add_unit_screen.dart';
 import 'package:landlord_management_app/screens/unit_detail_screen.dart';
 import 'package:landlord_management_app/screens/units_list_screen.dart';
+import 'package:landlord_management_app/utils/unit_lease_formatters.dart';
+import 'package:landlord_management_app/view_models/home_dashboard_data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.repository});
@@ -53,18 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final leases = widget.repository.getLeasesSortedByLeaseEnd();
-    final top3Expiring = widget.repository.getTopExpiringLeases(3);
-    final now = DateTime.now();
-    final expiringThisMonth = widget.repository.countExpiringInMonth(now);
-    final todayContactLeases = leases.where((lease) {
-      final nextContactDate = lease.nextContactDate;
-      return nextContactDate != null && _isSameDate(nextContactDate, now);
-    }).toList();
-    final contactTodayCount = todayContactLeases.length;
-    final top3ContactToday = todayContactLeases.take(3).toList();
-    final negotiatingCount =
-        leases.where((lease) => lease.status == LeaseStatus.negotiating).length;
+    final dashboard = HomeDashboardData.fromRepository(widget.repository);
 
     return Scaffold(
       appBar: AppBar(
@@ -91,55 +82,42 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           _SummaryCard(
             title: '오늘 연락할 항목',
-            countText: '$contactTodayCount건',
+            countText: '${dashboard.contactTodayCount}건',
             highlightColor: const Color(0xFF0D6E6E),
-            helperText: contactTodayCount == 0
+            helperText: dashboard.contactTodayCount == 0
                 ? '오늘 바로 연락할 항목이 없습니다.'
                 : '눌러서 오늘 연락할 호실을 바로 보세요.',
             onTap: () => _openFilteredList(
               title: '오늘 연락할 항목',
-              filter: (repository) =>
-                  repository.getLeasesSortedByLeaseEnd().where((lease) {
-                final nextContactDate = lease.nextContactDate;
-                return nextContactDate != null &&
-                    _isSameDate(nextContactDate, now);
-              }).toList(),
+              filter: (_) => dashboard.todayContactLeases,
               emptyMessage: '오늘 연락할 호실이 없습니다.',
             ),
           ),
           const SizedBox(height: 12),
           _SummaryCard(
             title: '협의중',
-            countText: '$negotiatingCount건',
+            countText: '${dashboard.negotiatingCount}건',
             highlightColor: const Color(0xFF8A5A00),
-            helperText: negotiatingCount == 0
+            helperText: dashboard.negotiatingCount == 0
                 ? '지금 협의중인 호실이 없습니다.'
                 : '눌러서 협의중인 호실을 확인하세요.',
             onTap: () => _openFilteredList(
               title: '협의중',
-              filter: (repository) => repository
-                  .getLeasesSortedByLeaseEnd()
-                  .where((lease) => lease.status == LeaseStatus.negotiating)
-                  .toList(),
+              filter: (_) => dashboard.negotiatingLeases,
               emptyMessage: '협의중인 호실이 없습니다.',
             ),
           ),
           const SizedBox(height: 12),
           _SummaryCard(
             title: '이번 달 만료',
-            countText: '$expiringThisMonth건',
+            countText: '${dashboard.expiringThisMonthCount}건',
             highlightColor: Theme.of(context).colorScheme.primary,
-            helperText: expiringThisMonth == 0
+            helperText: dashboard.expiringThisMonthCount == 0
                 ? '이번 달 만료 예정이 없습니다.'
                 : '눌러서 이번 달 만료 호실을 확인하세요.',
             onTap: () => _openFilteredList(
               title: '이번 달 만료',
-              filter: (repository) => repository
-                  .getLeasesSortedByLeaseEnd()
-                  .where((lease) =>
-                      lease.leaseEnd.year == now.year &&
-                      lease.leaseEnd.month == now.month)
-                  .toList(),
+              filter: (_) => dashboard.thisMonthExpiringLeases,
               emptyMessage: '이번 달 만료 예정 호실이 없습니다.',
             ),
           ),
@@ -169,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(fontSize: 20),
           ),
           const SizedBox(height: 12),
-          if (top3ContactToday.isEmpty)
+          if (dashboard.top3ContactToday.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(20),
@@ -179,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-          ...top3ContactToday.map(
+          ...dashboard.top3ContactToday.map(
             (unit) => _ContactTodayTile(
               unit: unit,
               onUpdated: (updated) => setState(
@@ -204,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(fontSize: 20),
           ),
           const SizedBox(height: 12),
-          ...top3Expiring.map(
+          ...dashboard.top3ExpiringLeases.map(
             (unit) => _UnitTile(
               unit: unit,
               onUpdated: (updated) => setState(
@@ -241,12 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  bool _isSameDate(DateTime left, DateTime right) {
-    return left.year == right.year &&
-        left.month == right.month &&
-        left.day == right.day;
   }
 }
 
@@ -352,12 +324,12 @@ class _UnitTile extends StatelessWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
-            '${unit.buildingName} · ${unit.tenantName} · ${_dateToText(unit.leaseEnd)} 만료',
+            '${unit.buildingName} · ${unit.tenantName} · ${formatLeaseDate(unit.leaseEnd)} 만료',
             style: const TextStyle(fontSize: 20),
           ),
         ),
         trailing: Text(
-          _dDayText(unit.daysRemainingUntilLeaseEnd()),
+          formatLeaseCountdown(unit.daysRemainingUntilLeaseEnd()),
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -366,18 +338,6 @@ class _UnitTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _dateToText(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
-  }
-
-  String _dDayText(int days) {
-    if (days > 0) return '$days일 남음';
-    if (days == 0) return '오늘 만료';
-    return '${days.abs()}일 지남';
   }
 }
 
@@ -419,23 +379,12 @@ class _ContactTodayTile extends StatelessWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            '${unit.tenantName} · ${_statusText(unit.status)}',
+            '${unit.tenantName} · ${leaseStatusText(unit.status)}',
             style: const TextStyle(fontSize: 21),
           ),
         ),
         trailing: const Icon(Icons.chevron_right, size: 32),
       ),
     );
-  }
-
-  String _statusText(LeaseStatus status) {
-    switch (status) {
-      case LeaseStatus.active:
-        return '진행중';
-      case LeaseStatus.negotiating:
-        return '협의중';
-      case LeaseStatus.ended:
-        return '종료/퇴거';
-    }
   }
 }

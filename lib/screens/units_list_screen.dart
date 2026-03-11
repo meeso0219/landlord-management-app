@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:landlord_management_app/models/unit_lease.dart';
 import 'package:landlord_management_app/repositories/unit_lease_repository.dart';
 import 'package:landlord_management_app/screens/unit_detail_screen.dart';
+import 'package:landlord_management_app/utils/unit_lease_formatters.dart';
 
 typedef UnitLeaseFilter = List<UnitLease> Function(
   UnitLeaseRepository repository,
@@ -91,12 +92,12 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        '${unit.tenantName} · ${_statusText(unit.status)} · ${_dateToText(unit.leaseEnd)} 만료',
+                        '${unit.tenantName} · ${leaseStatusText(unit.status)} · ${formatLeaseDate(unit.leaseEnd)} 만료',
                         style: const TextStyle(fontSize: 20),
                       ),
                     ),
                     trailing: Text(
-                      _dDayText(unit.daysRemainingUntilLeaseEnd()),
+                      formatLeaseCountdown(unit.daysRemainingUntilLeaseEnd()),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -108,28 +109,5 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
               },
             ),
     );
-  }
-
-  String _statusText(LeaseStatus status) {
-    switch (status) {
-      case LeaseStatus.active:
-        return '진행중';
-      case LeaseStatus.negotiating:
-        return '협의중';
-      case LeaseStatus.ended:
-        return '종료/퇴거';
-    }
-  }
-
-  String _dateToText(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
-  }
-
-  String _dDayText(int days) {
-    if (days > 0) return '$days일 남음';
-    if (days == 0) return '오늘 만료';
-    return '${days.abs()}일 지남';
   }
 }

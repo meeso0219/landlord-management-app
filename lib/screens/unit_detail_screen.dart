@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:landlord_management_app/models/unit_lease.dart';
 import 'package:landlord_management_app/screens/add_unit_screen.dart';
+import 'package:landlord_management_app/utils/unit_lease_formatters.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -118,7 +119,7 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
   String _buildShareMessage() {
     return '${_unit.tenantName}님, 안녕하세요.\n'
         '${_unit.buildingName} ${_unit.unitNo} 계약 안내드립니다.\n'
-        '계약 종료일은 ${_dateToText(_unit.leaseEnd)}입니다.';
+        '계약 종료일은 ${formatLeaseDate(_unit.leaseEnd)}입니다.';
   }
 
   Future<void> _openEditScreen() async {
@@ -303,18 +304,18 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
             const SizedBox(height: 10),
             _summaryRow('연락처', _unit.tenantPhone),
             const SizedBox(height: 14),
-            _highlightRow('계약 종료일', _dateToText(_unit.leaseEnd)),
+            _highlightRow('계약 종료일', formatLeaseDate(_unit.leaseEnd)),
             const SizedBox(height: 10),
             _highlightRow('만료까지',
-                _leaseCountdownText(_unit.daysRemainingUntilLeaseEnd())),
+                formatLeaseCountdown(_unit.daysRemainingUntilLeaseEnd())),
             const SizedBox(height: 10),
-            _highlightRow('상태', _statusText(_unit.status)),
+            _highlightRow('상태', leaseStatusText(_unit.status)),
             const SizedBox(height: 10),
             _highlightRow(
               '다음 연락일',
               _unit.nextContactDate == null
                   ? '미정'
-                  : _dateToText(_unit.nextContactDate!),
+                  : formatLeaseDate(_unit.nextContactDate!),
             ),
           ],
         ),
@@ -411,28 +412,5 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
         ],
       ),
     );
-  }
-
-  String _dateToText(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
-  }
-
-  String _statusText(LeaseStatus status) {
-    switch (status) {
-      case LeaseStatus.active:
-        return '진행중';
-      case LeaseStatus.negotiating:
-        return '협의중';
-      case LeaseStatus.ended:
-        return '종료/퇴거';
-    }
-  }
-
-  String _leaseCountdownText(int days) {
-    if (days > 0) return '$days일 남음';
-    if (days == 0) return '오늘 만료';
-    return '${days.abs()}일 지남';
   }
 }
