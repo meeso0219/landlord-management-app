@@ -232,10 +232,17 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
                     _unit.nextContactDate == null ? '다음 연락일 정하기' : '다음 연락일 수정',
                 onPressed: _pickNextContactDate,
               ),
+              const SizedBox(height: 8),
+              const Text(
+                '정한 연락일은 홈 화면의 연락 목록에 표시됩니다.',
+                style: TextStyle(fontSize: 20),
+              ),
               const SizedBox(height: 10),
               _actionButton(
                 label: '다음 연락일 삭제',
-                onPressed: _clearNextContactDate,
+                onPressed: _unit.nextContactDate == null
+                    ? null
+                    : _clearNextContactDate,
               ),
               const SizedBox(height: 10),
               _actionButton(
@@ -339,7 +346,7 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
 
   Widget _actionButton({
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return SizedBox(
       width: double.infinity,
