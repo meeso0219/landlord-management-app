@@ -56,6 +56,12 @@ class NotificationService {
     }
   }
 
+  Future<void> syncLeaseExpirationNotifications(List<UnitLease> leases) async {
+    for (final lease in leases) {
+      await syncLeaseExpirationNotification(lease);
+    }
+  }
+
   Future<void> syncFollowUpNotification(UnitLease lease) async {
     final nextContactDate = lease.nextContactDate;
     if (nextContactDate == null) {
@@ -100,12 +106,86 @@ class NotificationService {
     );
   }
 
+  Future<void> syncLeaseExpirationNotification(UnitLease lease) async {
+    await cancelLeaseExpirationNotificationsByLeaseId(lease.id);
+
+    final sevenDaysBefore = DateTime(
+      lease.leaseEnd.year,
+      lease.leaseEnd.month,
+      lease.leaseEnd.day - 7,
+      9,
+    );
+    final onLeaseEnd = DateTime(
+      lease.leaseEnd.year,
+      lease.leaseEnd.month,
+      lease.leaseEnd.day,
+      9,
+    );
+
+    if (sevenDaysBefore.isAfter(DateTime.now())) {
+      await _notifications.zonedSchedule(
+        _leaseExpirationSoonNotificationIdForLease(lease.id),
+        '계약 만료 7일 전',
+        '${lease.buildingName} ${lease.unitNo} 계약 만료가 7일 남았습니다.',
+        tz.TZDateTime.from(sevenDaysBefore, tz.local),
+        _leaseExpirationNotificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+
+    if (onLeaseEnd.isAfter(DateTime.now())) {
+      await _notifications.zonedSchedule(
+        _leaseExpirationDayNotificationIdForLease(lease.id),
+        '계약 만료일 안내',
+        '${lease.buildingName} ${lease.unitNo} 계약이 오늘 만료됩니다.',
+        tz.TZDateTime.from(onLeaseEnd, tz.local),
+        _leaseExpirationNotificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+  }
+
   Future<void> cancelFollowUpNotificationByLeaseId(String leaseId) {
     return _notifications.cancel(_notificationIdForLease(leaseId));
   }
 
+  Future<void> cancelLeaseExpirationNotificationsByLeaseId(String leaseId) {
+    return Future.wait([
+      _notifications
+          .cancel(_leaseExpirationSoonNotificationIdForLease(leaseId)),
+      _notifications.cancel(_leaseExpirationDayNotificationIdForLease(leaseId)),
+    ]);
+  }
+
   int _notificationIdForLease(String leaseId) {
     return leaseId.hashCode & 0x7fffffff;
+  }
+
+  int _leaseExpirationSoonNotificationIdForLease(String leaseId) {
+    return (leaseId.hashCode & 0x3fffffff) + 1000000000;
+  }
+
+  int _leaseExpirationDayNotificationIdForLease(String leaseId) {
+    return (leaseId.hashCode & 0x3fffffff) + 1500000000;
+  }
+
+  NotificationDetails get _leaseExpirationNotificationDetails {
+    const androidDetails = AndroidNotificationDetails(
+      'lease_expiration_notifications',
+      '계약 만료 알림',
+      channelDescription: '계약 만료 일정을 알려주는 알림입니다.',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    return const NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
   }
 
   Future<void> _configureLocalTimeZone() async {

@@ -87,6 +87,8 @@ class InMemoryUnitLeaseRepository implements UnitLeaseRepository {
       localDataSource: localDataSource,
     );
     await NotificationService.instance.syncFollowUpNotifications(initial);
+    await NotificationService.instance
+        .syncLeaseExpirationNotifications(initial);
     return repository;
   }
 
@@ -107,6 +109,12 @@ class InMemoryUnitLeaseRepository implements UnitLeaseRepository {
 
   void _syncFollowUpNotification(UnitLease lease) {
     unawaited(NotificationService.instance.syncFollowUpNotification(lease));
+  }
+
+  void _syncLeaseExpirationNotification(UnitLease lease) {
+    unawaited(
+      NotificationService.instance.syncLeaseExpirationNotification(lease),
+    );
   }
 
   @override
@@ -137,6 +145,7 @@ class InMemoryUnitLeaseRepository implements UnitLeaseRepository {
     _leases.add(lease);
     _persist();
     _syncFollowUpNotification(lease);
+    _syncLeaseExpirationNotification(lease);
   }
 
   @override
@@ -146,6 +155,7 @@ class InMemoryUnitLeaseRepository implements UnitLeaseRepository {
     _leases[index] = lease;
     _persist();
     _syncFollowUpNotification(lease);
+    _syncLeaseExpirationNotification(lease);
   }
 
   @override
@@ -156,6 +166,12 @@ class InMemoryUnitLeaseRepository implements UnitLeaseRepository {
     for (final lease in removedLeases) {
       unawaited(
         NotificationService.instance.cancelFollowUpNotificationByLeaseId(
+          lease.id,
+        ),
+      );
+      unawaited(
+        NotificationService.instance
+            .cancelLeaseExpirationNotificationsByLeaseId(
           lease.id,
         ),
       );
