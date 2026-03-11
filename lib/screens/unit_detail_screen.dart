@@ -211,14 +211,12 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSummaryCard(),
-              const SizedBox(height: 28),
-              _sectionTitle('빠른 작업'),
-              const SizedBox(height: 12),
-              const Text(
-                '정한 연락일은 홈 화면의 연락 목록에 표시됩니다.',
-                style: TextStyle(fontSize: 20),
+              const SizedBox(height: 20),
+              _sectionHeader(
+                title: '빠른 작업',
+                helperText: '아래 버튼으로 바로 연락하거나 일정을 정할 수 있습니다.',
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _actionButton(
                 label: '전화하기',
                 onPressed: _callTenant,
@@ -241,31 +239,34 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
               ),
               const SizedBox(height: 10),
               _actionButton(
-                label: '🔁 협의중으로 변경',
+                label: '협의중으로 변경',
                 onPressed: _setNegotiating,
               ),
-              const SizedBox(height: 28),
-              _sectionTitle('계약 처리'),
+              const SizedBox(height: 24),
+              _sectionHeader(
+                title: '계약 처리',
+                helperText: '계약 내용을 반영합니다.',
+              ),
               const SizedBox(height: 12),
               _actionButton(
-                label: '✅ 갱신 (+2년)',
+                label: '갱신 (+2년)',
                 onPressed: _renewTwoYears,
               ),
               const SizedBox(height: 10),
               _actionButton(
-                label: '🚪 종료/퇴거',
+                label: '종료/퇴거',
                 onPressed: _setEnded,
               ),
-              const SizedBox(height: 28),
-              _sectionTitle('정보 관리'),
+              const SizedBox(height: 24),
+              _sectionHeader(title: '정보 관리'),
               const SizedBox(height: 12),
               _actionButton(
-                label: '✏️ 수정',
+                label: '정보 수정',
                 onPressed: _openEditScreen,
               ),
               const SizedBox(height: 10),
               _actionButton(
-                label: '🗑️ 삭제',
+                label: '삭제',
                 onPressed: _deleteUnit,
               ),
             ],
@@ -278,44 +279,61 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
   Widget _buildSummaryCard() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${_unit.buildingName} ${_unit.unitNo}',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+            const Text(
+              '상단 요약 정보',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 16),
-            _infoRow('세입자', _unit.tenantName),
             const SizedBox(height: 14),
-            _infoRow('연락처', _unit.tenantPhone),
+            _summaryRow('건물', _unit.buildingName),
+            const SizedBox(height: 10),
+            _summaryRow('호실', _unit.unitNo),
+            const SizedBox(height: 10),
+            _summaryRow('세입자', _unit.tenantName),
+            const SizedBox(height: 10),
+            _summaryRow('연락처', _unit.tenantPhone),
             const SizedBox(height: 14),
-            _infoRow('계약 시작', _dateToText(_unit.leaseStart)),
-            const SizedBox(height: 14),
-            _infoRow('계약 종료', _dateToText(_unit.leaseEnd)),
-            const SizedBox(height: 14),
-            _infoRow('상태', _statusText(_unit.status)),
-            const SizedBox(height: 14),
-            _infoRow(
+            _highlightRow('계약 종료일', _dateToText(_unit.leaseEnd)),
+            const SizedBox(height: 10),
+            _highlightRow('만료까지',
+                _leaseCountdownText(_unit.daysRemainingUntilLeaseEnd())),
+            const SizedBox(height: 10),
+            _highlightRow('상태', _statusText(_unit.status)),
+            const SizedBox(height: 10),
+            _highlightRow(
               '다음 연락일',
               _unit.nextContactDate == null
                   ? '미정'
                   : _dateToText(_unit.nextContactDate!),
             ),
-            const SizedBox(height: 14),
-            _infoRow('만료까지',
-                _leaseCountdownText(_unit.daysRemainingUntilLeaseEnd())),
           ],
         ),
       ),
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+  Widget _sectionHeader({
+    required String title,
+    String? helperText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+        ),
+        if (helperText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helperText,
+            style: const TextStyle(fontSize: 20),
+          ),
+        ],
+      ],
     );
   }
 
@@ -335,20 +353,56 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _summaryRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+          ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 24),
+            style: const TextStyle(fontSize: 23),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _highlightRow(String label, String value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
