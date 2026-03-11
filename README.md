@@ -1,4 +1,4 @@
-# landlord_management_app
+# landlord-management-app
 
 A new Flutter project.
 
