@@ -50,7 +50,7 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
     _showActionSnackBar('계약을 2년 갱신했습니다.');
   }
 
-  Future<void> _setNegotiating() async {
+  Future<void> _pickNextContactDate() async {
     final now = DateTime.now();
     final pickedDate = await showDatePicker(
       context: context,
@@ -64,11 +64,32 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
     if (pickedDate == null) return;
     _updateUnit(
       _unit.copyWith(
-        status: LeaseStatus.negotiating,
         nextContactDate: pickedDate,
       ),
     );
-    _showActionSnackBar('협의중으로 변경하고 다음 연락일을 저장했습니다.');
+    _showActionSnackBar('다음 연락일을 저장했습니다.');
+  }
+
+  void _clearNextContactDate() {
+    if (_unit.nextContactDate == null) {
+      _showActionSnackBar('삭제할 다음 연락일이 없습니다.');
+      return;
+    }
+    _updateUnit(
+      _unit.copyWith(
+        nextContactDate: null,
+      ),
+    );
+    _showActionSnackBar('다음 연락일을 삭제했습니다.');
+  }
+
+  void _setNegotiating() {
+    _updateUnit(
+      _unit.copyWith(
+        status: LeaseStatus.negotiating,
+      ),
+    );
+    _showActionSnackBar('상태를 협의중으로 변경했습니다.');
   }
 
   void _setEnded() {
@@ -189,108 +210,126 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _infoRow('건물', _unit.buildingName),
-              const SizedBox(height: 14),
-              _infoRow('호실', _unit.unitNo),
-              const SizedBox(height: 14),
-              _infoRow('세입자', _unit.tenantName),
-              const SizedBox(height: 14),
-              _infoRow('연락처', _unit.tenantPhone),
-              const SizedBox(height: 14),
-              _infoRow('계약 시작', _dateToText(_unit.leaseStart)),
-              const SizedBox(height: 14),
-              _infoRow('계약 종료', _dateToText(_unit.leaseEnd)),
-              const SizedBox(height: 14),
-              _infoRow('상태', _statusText(_unit.status)),
-              const SizedBox(height: 14),
-              _infoRow(
-                '다음 연락일',
-                _unit.nextContactDate == null
-                    ? '미정'
-                    : _dateToText(_unit.nextContactDate!),
+              _buildSummaryCard(),
+              const SizedBox(height: 28),
+              _sectionTitle('빠른 작업'),
+              const SizedBox(height: 12),
+              const Text(
+                '정한 연락일은 홈 화면의 연락 목록에 표시됩니다.',
+                style: TextStyle(fontSize: 20),
               ),
               const SizedBox(height: 14),
-              _infoRow('만료까지',
-                  _leaseCountdownText(_unit.daysRemainingUntilLeaseEnd())),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _callTenant,
-                  child: const Text(
-                    '전화하기',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '전화하기',
+                onPressed: _callTenant,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _shareMessage,
-                  child: const Text(
-                    '문자/공유',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '문자/공유',
+                onPressed: _shareMessage,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _openEditScreen,
-                  child: const Text(
-                    '✏️ 수정',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label:
+                    _unit.nextContactDate == null ? '다음 연락일 정하기' : '다음 연락일 수정',
+                onPressed: _pickNextContactDate,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _deleteUnit,
-                  child: const Text(
-                    '🗑️ 삭제',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '다음 연락일 삭제',
+                onPressed: _clearNextContactDate,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _renewTwoYears,
-                  child: const Text(
-                    '✅ 갱신 (+2년)',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '🔁 협의중으로 변경',
+                onPressed: _setNegotiating,
+              ),
+              const SizedBox(height: 28),
+              _sectionTitle('계약 처리'),
+              const SizedBox(height: 12),
+              _actionButton(
+                label: '✅ 갱신 (+2년)',
+                onPressed: _renewTwoYears,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _setNegotiating,
-                  child: const Text(
-                    '🔁 협의중',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '🚪 종료/퇴거',
+                onPressed: _setEnded,
+              ),
+              const SizedBox(height: 28),
+              _sectionTitle('정보 관리'),
+              const SizedBox(height: 12),
+              _actionButton(
+                label: '✏️ 수정',
+                onPressed: _openEditScreen,
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _setEnded,
-                  child: const Text(
-                    '🚪 종료/퇴거',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              _actionButton(
+                label: '🗑️ 삭제',
+                onPressed: _deleteUnit,
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_unit.buildingName} ${_unit.unitNo}',
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            _infoRow('세입자', _unit.tenantName),
+            const SizedBox(height: 14),
+            _infoRow('연락처', _unit.tenantPhone),
+            const SizedBox(height: 14),
+            _infoRow('계약 시작', _dateToText(_unit.leaseStart)),
+            const SizedBox(height: 14),
+            _infoRow('계약 종료', _dateToText(_unit.leaseEnd)),
+            const SizedBox(height: 14),
+            _infoRow('상태', _statusText(_unit.status)),
+            const SizedBox(height: 14),
+            _infoRow(
+              '다음 연락일',
+              _unit.nextContactDate == null
+                  ? '미정'
+                  : _dateToText(_unit.nextContactDate!),
+            ),
+            const SizedBox(height: 14),
+            _infoRow('만료까지',
+                _leaseCountdownText(_unit.daysRemainingUntilLeaseEnd())),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+    );
+  }
+
+  Widget _actionButton({
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
         ),
       ),
     );
